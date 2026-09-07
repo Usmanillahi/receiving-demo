@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Receiving Scanner</title>
-
-    <script src="https://unpkg.com/html5-qrcode"></script>
+<!-- <script src="https://unpkg.com/@zxing/browser@latest"></script> -->
+    <script src="https://unpkg.com/@zxing/browser@0.2.1"></script>
     <script src="./receiving-data.js"></script>
 
     <style>
@@ -109,6 +109,53 @@
             font-size: 14px;
             color: #777;
         }
+        #scannerContainer {
+            position: relative;
+            width: 100%;
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #000;
+        }
+
+        #scannerVideo {
+            display: block;
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background: #000;
+        }
+
+        .scannerGuide {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 100px;
+            transform: translateY(-50%);
+
+            border: 3px solid #fff;
+            border-radius: 8px;
+
+            box-sizing: border-box;
+
+            color: white;
+            text-align: center;
+            padding-top: 105px;
+
+            font-size: 14px;
+
+            pointer-events: none;
+        }
+
+        #startScannerButton {
+            position: relative;
+            z-index: 5;
+        }
+
+        #startScannerButton.stop {
+            background: #b00020;
+        }
     </style>
 </head>
 
@@ -122,7 +169,24 @@
         Scan the receiving barcode
     </p>
 
-    <div id="reader"></div>
+    <div id="scannerContainer">
+
+    <video
+        id="scannerVideo"
+        autoplay
+        muted
+        playsinline
+    ></video>
+
+    <div class="scannerGuide">
+        Place the barcode inside this area
+    </div>
+
+    <button id="startScannerButton">
+        Start Camera
+    </button>
+
+</div>
 
     <div class="result" id="resultBox">
         Scanned:
@@ -326,41 +390,186 @@
     document.getElementById("packagingSelect")
         .addEventListener("change", updateTareUI);
 
-    function onScanSuccess(decodedText) {
-        if (scannedBarcode !== null) return;
+// =========================================
+// ZXING BARCODE SCANNER
+// =========================================
 
-        scannedBarcode = decodedText;
-        document.getElementById("barcodeResult").innerText = decodedText;
+let codeReader = null;
+let scannerControls = null;
+let scannerRunning = false;
 
-        html5QrcodeScanner.clear();
 
-        document.getElementById("instructionText").innerText = "Enter receiving information";
+// =========================================
+// HANDLE SUCCESSFUL SCAN
+// =========================================
 
-        const resultBox = document.getElementById("resultBox");
-        resultBox.className = "result success";
-        resultBox.innerHTML = `
-            Inbound Scanned<br>
-            <strong>${decodedText}</strong>
-        `;
+function onScanSuccess(decodedText) {
 
-        document.getElementById("weightSection").style.display = "block";
+    // Prevent duplicate scans
+    if (scannedBarcode !== null) {
+        return;
+    }
+
+    console.log("Barcode detected:", decodedText);
+
+    scannedBarcode = decodedText;
+
+    // Stop camera
+    if (scannerControls) {
+        scannerControls.stop();
+        scannerControls = null;
+    }
+
+    scannerRunning = false;
+
+    const video = document.getElementById("scannerVideo");
+
+    if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+    }
+
+    document.getElementById("barcodeResult").innerText = decodedText;
+
+    document.getElementById("instructionText").innerText =
+        "Enter receiving information";
+
+    const resultBox = document.getElementById("resultBox");
+
+    resultBox.className = "result success";
+
+    resultBox.innerHTML = `
+        Inbound Scanned<br>
+        <strong>${decodedText}</strong>
+    `;
+
+    document.getElementById("weightSection").style.display = "block";
+
+    document.getElementById("startScannerButton").style.display = "none";
+
+    // Focus weight input
+    setTimeout(() => {
         document.getElementById("weightInput").focus();
+    }, 300);
+}
+
+
+// =========================================
+// START CAMERA
+// =========================================
+
+async function startBarcodeScanner() {
+
+    if (scannerRunning) {
+        return;
     }
 
-    function onScanFailure() {
-        // ignore
-    }
+    const startButton =
+        document.getElementById("startScannerButton");
 
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader",
-        {
-            fps: 10,
-            qrbox: { width: 300, height: 150 }
-        },
-        false
+    const video =
+        document.getElementById("scannerVideo");
+
+    startButton.disabled = true;
+    startButton.innerText = "Starting Camera...";
+
+    try {
+
+        scannerRunning = true;
+
+        // Create ZXing reader
+        codeReader = new ZXingBrowser.BrowserMultiFormatOneDReader();
+
+        console.log("Starting ZXing scanner...");
+
+        /*
+         * Use the rear/environment camera.
+         *
+         * "ideal" is intentionally used instead of "exact"
+         * because different iPhones expose the camera
+         * differently.
+         */
+        const constraints = {
+            video: {
+                facingMode: {
+                    ideal: "environment"
+                },
+
+                width: {
+                    ideal: 1920
+                },
+
+                height: {
+                    ideal: 1080
+                }
+            }
+        };
+
+        scannerControls =
+            await codeReader.decodeFromConstraints(
+                constraints,
+                video,
+                (result, error) => {
+
+                    if (result) {
+
+                        const text = result.getText();
+
+                        console.log(
+                            "ZXing detected barcode:",
+                            text
+                        );
+
+                        onScanSuccess(text);
+
+                    }
+
+                    // Normal "not found yet" errors are ignored.
+                    // ZXing continuously checks the camera.
+                }
+            );
+
+        startButton.disabled = false;
+
+        startButton.innerText =
+            "Scanning...";
+
+        startButton.classList.add("stop");
+
+    } catch (error) {
+
+        console.error(
+            "Camera/scanner error:",
+            error
+        );
+
+        scannerRunning = false;
+
+        startButton.disabled = false;
+
+        startButton.innerText =
+            "Start Camera";
+
+        alert(
+            "Unable to start the camera.\n\n" +
+            "Please make sure camera permission is allowed " +
+            "for this website and try again."
+        );
+    }
+}
+
+
+// =========================================
+// START BUTTON
+// =========================================
+
+document
+    .getElementById("startScannerButton")
+    .addEventListener(
+        "click",
+        startBarcodeScanner
     );
 
-    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
 
     document.getElementById("submitWeightButton").addEventListener("click", function () {
         const weightInput = document.getElementById("weightInput");
