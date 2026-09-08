@@ -359,6 +359,37 @@
 
 </div>
 
+<!-- Receiving Status Modal -->
+<div id="receivingStatusModal">
+
+    <div id="receivingModalBox" class="receiving-modal-box">
+
+        <div
+            id="receivingModalTitle"
+            class="receiving-modal-title">
+            Receiving Sent
+        </div>
+
+        <div
+            id="receivingModalDetails"
+            class="receiving-modal-details">
+        </div>
+
+        <div
+            id="receivingModalProcessing"
+            class="receiving-modal-processing">
+            Processing...
+        </div>
+
+        <button
+            id="receivingModalOk"
+            class="receiving-modal-ok">
+            OK
+        </button>
+
+    </div>
+
+</div>
 <script>
 
     // =========================================
@@ -1000,13 +1031,13 @@ if (data.success === false) {
 // =========================================
 
 receivingModalBox.className =
-    "receiving-modal-box success";
+    "receiving-modal-box";
 
 receivingModalTitle.innerText =
-    "Receiving Completed";
+    "Receiving Sent";
 
 receivingModalProcessing.innerText =
-    "Successfully processed";
+    "Processing...";
 
 receivingModalDetails.innerHTML = `
     <strong>Inbound:</strong> ${scannedBarcode}<br>
@@ -1015,14 +1046,11 @@ receivingModalDetails.innerHTML = `
     <strong>Net:</strong> ${netWeight.toFixed(2)} Lbs<br>
     <strong>Item:</strong> ${commodityName}<br>
     <strong>Packaging:</strong> ${packagingName}<br>
-    <strong>Workflow:</strong> ${workflowName}<br><br>
-
-    <strong>System Response:</strong><br>
-    ${data.message ||
-      "Receiving completed successfully."}
+    <strong>Workflow:</strong> ${workflowName}
 `;
 
-receivingStatusModal.style.display = "flex";
+receivingStatusModal.style.display =
+    "flex";
 
 document.getElementById("instructionText").innerText =
     "Receiving successfully submitted";
@@ -1039,60 +1067,38 @@ button.innerText = "Completed";
 
 } catch (error) {
 
-    // Hide modal if an unexpected error occurs
-    receivingStatusModal.style.display =
-        "none";
-
-
     console.error(
         "Error submitting receiving:",
         error
     );
 
+    // Show FAILURE modal
+    receivingModalBox.className =
+        "receiving-modal-box failure";
 
-    resultBox.className =
-        "result error";
+    receivingModalTitle.innerText =
+        "Receiving Failed";
 
+    receivingModalProcessing.innerText =
+        "Please review the error";
 
-    resultBox.innerHTML = `
+    receivingModalDetails.innerHTML = `
+        <strong>Inbound:</strong> ${scannedBarcode}<br><br>
 
-        <strong>
-            Submission Failed
-        </strong>
-
-        <br><br>
-
-        <span style="
-            font-size:14px;
-            line-height:1.5;
-            overflow-wrap:anywhere;
-        ">
-            Inbound: ${scannedBarcode}
-        </span>
-
-        <br><br>
-
-        <span style="
-            font-size:14px;
-            line-height:1.5;
-            overflow-wrap:anywhere;
-        ">
-            ${error.message ||
-              "Unable to communicate with the receiving system."}
-        </span>
+        <strong>Error:</strong><br>
+        ${error.message ||
+          "Unable to communicate with the receiving system."}
     `;
 
+    receivingStatusModal.style.display =
+        "flex";
 
     document
-        .getElementById(
-            "instructionText"
-        )
+        .getElementById("instructionText")
         .innerText =
             "Submission failed";
 
-
-    button.disabled =
-        false;
+    button.disabled = false;
 
     button.innerText =
         "Submit Receiving";
@@ -1103,36 +1109,5 @@ button.innerText = "Completed";
         location.reload();
     });
 </script>
-<!-- Receiving Status Modal -->
-<div id="receivingStatusModal">
-
-    <div id="receivingModalBox" class="receiving-modal-box">
-
-        <div
-            id="receivingModalTitle"
-            class="receiving-modal-title">
-            Receiving Sent
-        </div>
-
-        <div
-            id="receivingModalDetails"
-            class="receiving-modal-details">
-        </div>
-
-        <div
-            id="receivingModalProcessing"
-            class="receiving-modal-processing">
-            Processing...
-        </div>
-
-        <button
-            id="receivingModalOk"
-            class="receiving-modal-ok">
-            OK
-        </button>
-
-    </div>
-
-</div>
 </body>
 </html>
