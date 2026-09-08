@@ -152,50 +152,97 @@
             background: #b00020;
         }
 
-                /* Receiving status modal */
-        #receivingStatusModal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
+        /* =========================================
+   RECEIVING STATUS MODAL
+   ========================================= */
 
-                .receiving-modal-box {
-            width: 100%;
-            max-width: 380px;
-            max-height: 85vh;
-            overflow-y: auto;
-            background: white;
-            border-radius: 16px;
-            padding: 24px 20px;
-            text-align: center;
-            box-sizing: border-box;
-            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
-        }
+#receivingStatusModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
 
-        .receiving-modal-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 14px;
-        }
+.receiving-modal-box {
+    width: 100%;
+    max-width: 380px;
+    max-height: 85vh;
+    overflow-y: auto;
 
-        .receiving-modal-details {
-            font-size: 14px;
-            line-height: 1.5;
-            color: #444;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
+    border-radius: 18px;
+    padding: 28px 22px;
 
-        .receiving-modal-processing {
-            margin-top: 16px;
-            font-size: 14px;
-            color: #666;
-        }
+    text-align: center;
+    box-sizing: border-box;
+
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
+
+    transition: background 0.2s ease;
+}
+
+/* SUCCESS */
+.receiving-modal-box.success {
+    background: #dff5e1;
+    color: #176b2c;
+}
+
+/* FAILURE */
+.receiving-modal-box.failure {
+    background: #ffe0e0;
+    color: #9b1c1c;
+}
+
+.receiving-modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.receiving-modal-details {
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.receiving-modal-processing {
+    margin-top: 16px;
+    font-size: 14px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* BIG OK BUTTON */
+.receiving-modal-ok {
+    width: 100%;
+    margin-top: 22px;
+
+    padding: 17px 20px;
+
+    border: none;
+    border-radius: 10px;
+
+    font-size: 20px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+/* SUCCESS OK */
+.receiving-modal-box.success .receiving-modal-ok {
+    background: #218838;
+    color: white;
+}
+
+/* FAILURE OK */
+.receiving-modal-box.failure .receiving-modal-ok {
+    background: #c82333;
+    color: white;
+}
     </style>
 </head>
 
@@ -607,7 +654,16 @@ document
         "click",
         startBarcodeScanner
     );
+document
+    .getElementById("receivingModalOk")
+    .addEventListener("click", function () {
 
+        receivingStatusModal.style.display = "none";
+
+        // Optional:
+        // reload page so user can immediately scan another inbound
+        // location.reload();
+    });
 
     document
     .getElementById("submitWeightButton")
@@ -732,15 +788,27 @@ document
 // SHOW "SENT" MODAL
 // =========================================
 
-const receivingStatusModal =
-    document.getElementById(
-        "receivingStatusModal"
-    );
+    const receivingStatusModal =
+        document.getElementById(
+            "receivingStatusModal"
+        );
 
-const receivingModalDetails =
-    document.getElementById(
-        "receivingModalDetails"
-    );
+    const receivingModalDetails =
+        document.getElementById(
+            "receivingModalDetails"
+        );
+
+    const receivingModalBox =
+        document.getElementById("receivingModalBox");
+
+    const receivingModalTitle =
+        document.getElementById("receivingModalTitle");
+
+    const receivingModalProcessing =
+        document.getElementById("receivingModalProcessing");
+
+    const receivingModalOk =
+        document.getElementById("receivingModalOk");
 
 receivingModalDetails.innerHTML = `
     Inbound: ${scannedBarcode}<br>
@@ -898,27 +966,24 @@ try {
 
 if (data.success === false) {
 
-    receivingStatusModal.style.display = "flex";
+    receivingModalBox.className =
+        "receiving-modal-box failure";
 
-    document.querySelector(".receiving-modal-title").innerText =
+    receivingModalTitle.innerText =
         "Receiving Failed";
 
-    document.querySelector(".receiving-modal-processing").innerText =
+    receivingModalProcessing.innerText =
         "Please review the error";
 
     receivingModalDetails.innerHTML = `
-        <div style="
-            font-size:14px;
-            line-height:1.5;
-            overflow-wrap:anywhere;
-        ">
-            <strong>Inbound:</strong> ${scannedBarcode}<br><br>
+        <strong>Inbound:</strong> ${scannedBarcode}<br><br>
 
-            <strong>Error:</strong><br>
-            ${data.message ||
-              "The receiving could not be completed."}
-        </div>
+        <strong>Error:</strong><br>
+        ${data.message ||
+          "The receiving could not be completed."}
     `;
+
+    receivingStatusModal.style.display = "flex";
 
     document.getElementById("instructionText").innerText =
         "Receiving failed";
@@ -934,33 +999,30 @@ if (data.success === false) {
 // SUCCESS
 // =========================================
 
-receivingStatusModal.style.display = "flex";
+receivingModalBox.className =
+    "receiving-modal-box success";
 
-document.querySelector(".receiving-modal-title").innerText =
+receivingModalTitle.innerText =
     "Receiving Completed";
 
-document.querySelector(".receiving-modal-processing").innerText =
-    "Receiving completed successfully";
+receivingModalProcessing.innerText =
+    "Successfully processed";
 
 receivingModalDetails.innerHTML = `
-    <div style="
-        font-size:14px;
-        line-height:1.6;
-        overflow-wrap:anywhere;
-    ">
-        <strong>Inbound:</strong> ${scannedBarcode}<br>
-        <strong>Gross:</strong> ${weight.toFixed(2)} Lbs<br>
-        <strong>Tare:</strong> ${weightTare.toFixed(2)} Lbs<br>
-        <strong>Net:</strong> ${netWeight.toFixed(2)} Lbs<br>
-        <strong>Item:</strong> ${commodityName}<br>
-        <strong>Packaging:</strong> ${packagingName}<br>
-        <strong>Workflow:</strong> ${workflowName}<br><br>
+    <strong>Inbound:</strong> ${scannedBarcode}<br>
+    <strong>Gross:</strong> ${weight.toFixed(2)} Lbs<br>
+    <strong>Tare:</strong> ${weightTare.toFixed(2)} Lbs<br>
+    <strong>Net:</strong> ${netWeight.toFixed(2)} Lbs<br>
+    <strong>Item:</strong> ${commodityName}<br>
+    <strong>Packaging:</strong> ${packagingName}<br>
+    <strong>Workflow:</strong> ${workflowName}<br><br>
 
-        <strong>System Response:</strong><br>
-        ${data.message ||
-          "Receiving completed successfully."}
-    </div>
+    <strong>System Response:</strong><br>
+    ${data.message ||
+      "Receiving completed successfully."}
 `;
+
+receivingStatusModal.style.display = "flex";
 
 document.getElementById("instructionText").innerText =
     "Receiving successfully submitted";
@@ -1041,23 +1103,33 @@ button.innerText = "Completed";
         location.reload();
     });
 </script>
-<!-- Receiving Sent Modal -->
+<!-- Receiving Status Modal -->
 <div id="receivingStatusModal">
 
-    <div class="receiving-modal-box">
+    <div id="receivingModalBox" class="receiving-modal-box">
 
-        <div class="receiving-modal-title">
+        <div
+            id="receivingModalTitle"
+            class="receiving-modal-title">
             Receiving Sent
         </div>
 
         <div
             id="receivingModalDetails"
-            class="receiving-modal-details"
-        ></div>
+            class="receiving-modal-details">
+        </div>
 
-        <div class="receiving-modal-processing">
+        <div
+            id="receivingModalProcessing"
+            class="receiving-modal-processing">
             Processing...
         </div>
+
+        <button
+            id="receivingModalOk"
+            class="receiving-modal-ok">
+            OK
+        </button>
 
     </div>
 
