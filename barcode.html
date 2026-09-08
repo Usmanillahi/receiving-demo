@@ -151,6 +151,47 @@
         #startScannerButton.stop {
             background: #b00020;
         }
+
+                /* Receiving status modal */
+        #receivingStatusModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .receiving-modal-box {
+            width: 100%;
+            max-width: 380px;
+            background: white;
+            border-radius: 16px;
+            padding: 24px 20px;
+            text-align: center;
+            box-sizing: border-box;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .receiving-modal-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .receiving-modal-details {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .receiving-modal-processing {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 
@@ -684,62 +725,35 @@ document
 
 
         // =========================================
-        // SHOW "SENT" STATE
-        // =========================================
+// SHOW "SENT" MODAL
+// =========================================
 
-        resultBox.className =
-            "result success";
+const receivingStatusModal =
+    document.getElementById(
+        "receivingStatusModal"
+    );
 
-        resultBox.innerHTML = `
-            <strong>Receiving Sent</strong>
+const receivingModalDetails =
+    document.getElementById(
+        "receivingModalDetails"
+    );
 
-            <br><br>
+receivingModalDetails.innerHTML = `
+    Inbound: ${scannedBarcode}<br>
+    Gross: ${weight.toFixed(2)} Lbs<br>
+    Tare: ${weightTare.toFixed(2)} Lbs<br>
+    Net: ${netWeight.toFixed(2)} Lbs<br>
+    Item: ${commodityName}<br>
+    Packaging: ${packagingName}<br>
+    Workflow: ${workflowName}
+`;
 
-            Inbound:
-            ${scannedBarcode}
+receivingStatusModal.style.display = "flex";
 
-            <br>
-
-            Gross:
-            ${weight.toFixed(2)} Lbs
-
-            <br>
-
-            Tare:
-            ${weightTare.toFixed(2)} Lbs
-
-            <br>
-
-            Net:
-            ${netWeight.toFixed(2)} Lbs
-
-            <br>
-
-            Item:
-            ${commodityName}
-
-            <br>
-
-            Packaging:
-            ${packagingName}
-
-            <br>
-
-            Workflow:
-            ${workflowName}
-
-            <br><br>
-
-            <span style="font-size:16px;">
-                Processing...
-            </span>
-        `;
-
-
-        document
-            .getElementById("instructionText")
-            .innerText =
-                "Processing receiving";
+document
+    .getElementById("instructionText")
+    .innerText =
+        "Processing receiving";
 
 
         // =========================================
@@ -774,265 +788,339 @@ document
         );
 
 
-        // =========================================
-        // SEND TO N8N
-        // =========================================
+       // =========================================
+// SEND TO N8N
+// =========================================
+
+try {
+
+    const sentAt = Date.now();
+
+    const response =
+        await fetch(
+            WEBHOOK_URL,
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+
+                body:
+                    JSON.stringify(
+                        receivingData
+                    )
+            }
+        );
+
+
+    const text =
+        await response.text();
+
+
+    console.log(
+        "Raw n8n response:",
+        text
+    );
+
+
+    // Make sure "Receiving Sent" stays
+    // on screen for at least 2 seconds.
+    const elapsed =
+        Date.now() - sentAt;
+
+    const remaining =
+        Math.max(
+            0,
+            2000 - elapsed
+        );
+
+    await new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                remaining
+            )
+    );
+
+
+    // Hide the modal before showing
+    // the final result.
+    receivingStatusModal.style.display =
+        "none";
+
+
+    let data = {};
+
+    if (text) {
 
         try {
 
-            const response =
-                await fetch(
-                    WEBHOOK_URL,
-                    {
-                        method: "POST",
+            data =
+                JSON.parse(text);
 
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify(
-                                receivingData
-                            )
-                    }
-                );
-
-
-            const text =
-                await response.text();
-
-
-            console.log(
-                "Raw n8n response:",
-                text
-            );
-
-
-            let data = {};
-
-            if (text) {
-
-                try {
-
-                    data =
-                        JSON.parse(text);
-
-                } catch (parseError) {
-
-                    console.error(
-                        "Could not parse n8n response:",
-                        parseError
-                    );
-
-                    throw new Error(
-                        "Invalid response received from n8n."
-                    );
-                }
-            }
-
-
-            // =========================================
-            // HTTP ERROR
-            // =========================================
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data.message ||
-                    "n8n returned HTTP " +
-                    response.status
-                );
-            }
-
-
-            console.log(
-                "Receiving response:",
-                data
-            );
-
-
-            // =========================================
-            // N8N / RAZOR ERROR
-            // =========================================
-
-            if (data.success === false) {
-
-                resultBox.className =
-                    "result error";
-
-                resultBox.innerHTML = `
-
-                    <strong>
-                        Receiving Failed
-                    </strong>
-
-                    <br><br>
-
-                    Inbound:
-                    ${scannedBarcode}
-
-                    <br><br>
-
-                    ${data.message ||
-                      "The receiving could not be completed."}
-                `;
-
-
-                document
-                    .getElementById(
-                        "instructionText"
-                    )
-                    .innerText =
-                        "Receiving failed";
-
-
-                button.disabled =
-                    false;
-
-                button.innerText =
-                    "Submit Receiving";
-
-
-                return;
-            }
-
-
-            // =========================================
-            // SUCCESS
-            // =========================================
-
-            resultBox.className =
-                "result success";
-
-            resultBox.innerHTML = `
-
-                <strong>
-                    Receiving Completed
-                </strong>
-
-                <br><br>
-
-                Inbound:
-                ${scannedBarcode}
-
-                <br>
-
-                Gross:
-                ${weight.toFixed(2)} Lbs
-
-                <br>
-
-                Tare:
-                ${weightTare.toFixed(2)} Lbs
-
-                <br>
-
-                Net:
-                ${netWeight.toFixed(2)} Lbs
-
-                <br>
-
-                Item:
-                ${commodityName}
-
-                <br>
-
-                Packaging:
-                ${packagingName}
-
-                <br>
-
-                Workflow:
-                ${workflowName}
-
-                <br><br>
-
-                <span style="font-size:16px;">
-                    ${data.message ||
-                      "Receiving completed successfully."}
-                </span>
-            `;
-
-
-            document
-                .getElementById(
-                    "weightSection"
-                )
-                .style.display =
-                    "none";
-
-
-            document
-                .getElementById(
-                    "instructionText"
-                )
-                .innerText =
-                    "Receiving successfully submitted";
-
-
-            document
-                .getElementById(
-                    "newScanButton"
-                )
-                .style.display =
-                    "block";
-
-
-        } catch (error) {
-
-            // =========================================
-            // NETWORK / UNEXPECTED ERROR
-            // =========================================
+        } catch (parseError) {
 
             console.error(
-                "Error submitting receiving:",
-                error
+                "Could not parse n8n response:",
+                parseError
             );
 
-
-            resultBox.className =
-                "result error";
-
-
-            resultBox.innerHTML = `
-
-                <strong>
-                    Submission Failed
-                </strong>
-
-                <br><br>
-
-                Inbound:
-                ${scannedBarcode}
-
-                <br><br>
-
-                ${error.message ||
-                  "Unable to communicate with the receiving system."}
-            `;
-
-
-            document
-                .getElementById(
-                    "instructionText"
-                )
-                .innerText =
-                    "Submission failed";
-
-
-            button.disabled =
-                false;
-
-            button.innerText =
-                "Submit Receiving";
+            throw new Error(
+                "Invalid response received from n8n."
+            );
         }
+    }
+
+
+    // =========================================
+    // HTTP ERROR
+    // =========================================
+
+    if (!response.ok) {
+
+        throw new Error(
+            data.message ||
+            "n8n returned HTTP " +
+            response.status
+        );
+    }
+
+
+    console.log(
+        "Receiving response:",
+        data
+    );
+
+
+    // =========================================
+    // N8N / RAZOR ERROR
+    // =========================================
+
+    if (data.success === false) {
+
+        resultBox.className =
+            "result error";
+
+        resultBox.innerHTML = `
+
+            <strong>
+                Receiving Failed
+            </strong>
+
+            <br><br>
+
+            <span style="
+                font-size:14px;
+                line-height:1.5;
+                overflow-wrap:anywhere;
+            ">
+                Inbound: ${scannedBarcode}
+            </span>
+
+            <br><br>
+
+            <span style="
+                font-size:14px;
+                line-height:1.5;
+                overflow-wrap:anywhere;
+            ">
+                ${data.message ||
+                  "The receiving could not be completed."}
+            </span>
+        `;
+
+
+        document
+            .getElementById(
+                "instructionText"
+            )
+            .innerText =
+                "Receiving failed";
+
+
+        button.disabled =
+            false;
+
+        button.innerText =
+            "Submit Receiving";
+
+
+        return;
+    }
+
+
+    // =========================================
+    // SUCCESS
+    // =========================================
+
+    resultBox.className =
+        "result success";
+
+    resultBox.innerHTML = `
+
+        <strong>
+            Receiving Completed
+        </strong>
+
+        <br><br>
+
+        Inbound:
+        ${scannedBarcode}
+
+        <br>
+
+        Gross:
+        ${weight.toFixed(2)} Lbs
+
+        <br>
+
+        Tare:
+        ${weightTare.toFixed(2)} Lbs
+
+        <br>
+
+        Net:
+        ${netWeight.toFixed(2)} Lbs
+
+        <br>
+
+        Item:
+        ${commodityName}
+
+        <br>
+
+        Packaging:
+        ${packagingName}
+
+        <br>
+
+        Workflow:
+        ${workflowName}
+
+        <br><br>
+
+        <span style="
+            font-size:14px;
+            line-height:1.5;
+        ">
+            ${data.message ||
+              "Receiving completed successfully."}
+        </span>
+    `;
+
+
+    document
+        .getElementById(
+            "weightSection"
+        )
+        .style.display =
+            "none";
+
+
+    document
+        .getElementById(
+            "instructionText"
+        )
+        .innerText =
+            "Receiving successfully submitted";
+
+
+    document
+        .getElementById(
+            "newScanButton"
+        )
+        .style.display =
+            "block";
+
+
+} catch (error) {
+
+    // Hide modal if an unexpected error occurs
+    receivingStatusModal.style.display =
+        "none";
+
+
+    console.error(
+        "Error submitting receiving:",
+        error
+    );
+
+
+    resultBox.className =
+        "result error";
+
+
+    resultBox.innerHTML = `
+
+        <strong>
+            Submission Failed
+        </strong>
+
+        <br><br>
+
+        <span style="
+            font-size:14px;
+            line-height:1.5;
+            overflow-wrap:anywhere;
+        ">
+            Inbound: ${scannedBarcode}
+        </span>
+
+        <br><br>
+
+        <span style="
+            font-size:14px;
+            line-height:1.5;
+            overflow-wrap:anywhere;
+        ">
+            ${error.message ||
+              "Unable to communicate with the receiving system."}
+        </span>
+    `;
+
+
+    document
+        .getElementById(
+            "instructionText"
+        )
+        .innerText =
+            "Submission failed";
+
+
+    button.disabled =
+        false;
+
+    button.innerText =
+        "Submit Receiving";
+}
     });
 
     document.getElementById("newScanButton").addEventListener("click", function () {
         location.reload();
     });
 </script>
+<!-- Receiving Sent Modal -->
+<div id="receivingStatusModal">
 
+    <div class="receiving-modal-box">
+
+        <div class="receiving-modal-title">
+            Receiving Sent
+        </div>
+
+        <div
+            id="receivingModalDetails"
+            class="receiving-modal-details"
+        ></div>
+
+        <div class="receiving-modal-processing">
+            Processing...
+        </div>
+
+    </div>
+
+</div>
 </body>
 </html>
