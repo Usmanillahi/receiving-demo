@@ -152,97 +152,91 @@
             background: #b00020;
         }
 
-        /* =========================================
-   RECEIVING STATUS MODAL
-   ========================================= */
+        #receivingStatusModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
 
-#receivingStatusModal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-}
+        .receiving-modal-box {
+            width: 100%;
+            max-width: 380px;
+            max-height: 85vh;
+            overflow-y: auto;
 
-.receiving-modal-box {
-    width: 100%;
-    max-width: 380px;
-    max-height: 85vh;
-    overflow-y: auto;
+            border-radius: 18px;
+            padding: 28px 22px;
 
-    border-radius: 18px;
-    padding: 28px 22px;
+            text-align: center;
+            box-sizing: border-box;
 
-    text-align: center;
-    box-sizing: border-box;
+            box-shadow:
+                0 10px 35px rgba(0, 0, 0, 0.3);
 
-    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.3);
+            transition: background 0.2s ease;
+        }
 
-    transition: background 0.2s ease;
-}
+        /* GREEN SUCCESS */
+        .receiving-modal-box.success {
+            background: #dff5e1;
+            color: #176b2c;
+        }
 
-/* SUCCESS */
-.receiving-modal-box.success {
-    background: #dff5e1;
-    color: #176b2c;
-}
+        /* RED/PINK FAILURE */
+        .receiving-modal-box.failure {
+            background: #ffe0e0;
+            color: #9b1c1c;
+        }
 
-/* FAILURE */
-.receiving-modal-box.failure {
-    background: #ffe0e0;
-    color: #9b1c1c;
-}
+        .receiving-modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
 
-.receiving-modal-title {
-    font-size: 24px;
-    font-weight: 700;
-    margin-bottom: 16px;
-}
+        .receiving-modal-details {
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
 
-.receiving-modal-details {
-    font-size: 14px;
-    line-height: 1.6;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-}
+        .receiving-modal-processing {
+            margin-top: 16px;
+            font-size: 14px;
+            color: inherit;
+            opacity: 0.8;
+        }
 
-.receiving-modal-processing {
-    margin-top: 16px;
-    font-size: 14px;
-    color: inherit;
-    opacity: 0.8;
-}
+        .receiving-modal-ok {
+            width: 100%;
+            margin-top: 22px;
 
-/* BIG OK BUTTON */
-.receiving-modal-ok {
-    width: 100%;
-    margin-top: 22px;
+            padding: 18px 20px;
 
-    padding: 17px 20px;
+            border: none;
+            border-radius: 10px;
 
-    border: none;
-    border-radius: 10px;
+            font-size: 21px;
+            font-weight: bold;
 
-    font-size: 20px;
-    font-weight: bold;
+            cursor: pointer;
+        }
 
-    cursor: pointer;
-}
+        .receiving-modal-box.success .receiving-modal-ok {
+            background: #218838;
+            color: white;
+        }
 
-/* SUCCESS OK */
-.receiving-modal-box.success .receiving-modal-ok {
-    background: #218838;
-    color: white;
-}
-
-/* FAILURE OK */
-.receiving-modal-box.failure .receiving-modal-ok {
-    background: #c82333;
-    color: white;
-}
+        .receiving-modal-box.failure .receiving-modal-ok {
+            background: #c82333;
+            color: white;
+        }
     </style>
 </head>
 
