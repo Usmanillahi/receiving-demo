@@ -164,9 +164,11 @@
             padding: 20px;
         }
 
-        .receiving-modal-box {
+                .receiving-modal-box {
             width: 100%;
             max-width: 380px;
+            max-height: 85vh;
+            overflow-y: auto;
             background: white;
             border-radius: 16px;
             padding: 24px 20px;
@@ -182,9 +184,11 @@
         }
 
         .receiving-modal-details {
-            font-size: 15px;
-            line-height: 1.6;
+            font-size: 14px;
+            line-height: 1.5;
             color: #444;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .receiving-modal-processing {
@@ -845,12 +849,6 @@ try {
     );
 
 
-    // Hide the modal before showing
-    // the final result.
-    receivingStatusModal.style.display =
-        "none";
-
-
     let data = {};
 
     if (text) {
@@ -894,145 +892,87 @@ try {
     );
 
 
-    // =========================================
-    // N8N / RAZOR ERROR
-    // =========================================
+// =========================================
+// N8N / RAZOR ERROR
+// =========================================
 
-    if (data.success === false) {
+if (data.success === false) {
 
-        resultBox.className =
-            "result error";
+    receivingStatusModal.style.display = "flex";
 
-        resultBox.innerHTML = `
+    document.querySelector(".receiving-modal-title").innerText =
+        "Receiving Failed";
 
-            <strong>
-                Receiving Failed
-            </strong>
+    document.querySelector(".receiving-modal-processing").innerText =
+        "Please review the error";
 
-            <br><br>
-
-            <span style="
-                font-size:14px;
-                line-height:1.5;
-                overflow-wrap:anywhere;
-            ">
-                Inbound: ${scannedBarcode}
-            </span>
-
-            <br><br>
-
-            <span style="
-                font-size:14px;
-                line-height:1.5;
-                overflow-wrap:anywhere;
-            ">
-                ${data.message ||
-                  "The receiving could not be completed."}
-            </span>
-        `;
-
-
-        document
-            .getElementById(
-                "instructionText"
-            )
-            .innerText =
-                "Receiving failed";
-
-
-        button.disabled =
-            false;
-
-        button.innerText =
-            "Submit Receiving";
-
-
-        return;
-    }
-
-
-    // =========================================
-    // SUCCESS
-    // =========================================
-
-    resultBox.className =
-        "result success";
-
-    resultBox.innerHTML = `
-
-        <strong>
-            Receiving Completed
-        </strong>
-
-        <br><br>
-
-        Inbound:
-        ${scannedBarcode}
-
-        <br>
-
-        Gross:
-        ${weight.toFixed(2)} Lbs
-
-        <br>
-
-        Tare:
-        ${weightTare.toFixed(2)} Lbs
-
-        <br>
-
-        Net:
-        ${netWeight.toFixed(2)} Lbs
-
-        <br>
-
-        Item:
-        ${commodityName}
-
-        <br>
-
-        Packaging:
-        ${packagingName}
-
-        <br>
-
-        Workflow:
-        ${workflowName}
-
-        <br><br>
-
-        <span style="
+    receivingModalDetails.innerHTML = `
+        <div style="
             font-size:14px;
             line-height:1.5;
+            overflow-wrap:anywhere;
         ">
+            <strong>Inbound:</strong> ${scannedBarcode}<br><br>
+
+            <strong>Error:</strong><br>
             ${data.message ||
-              "Receiving completed successfully."}
-        </span>
+              "The receiving could not be completed."}
+        </div>
     `;
 
+    document.getElementById("instructionText").innerText =
+        "Receiving failed";
 
-    document
-        .getElementById(
-            "weightSection"
-        )
-        .style.display =
-            "none";
+    button.disabled = false;
+    button.innerText = "Submit Receiving";
 
-
-    document
-        .getElementById(
-            "instructionText"
-        )
-        .innerText =
-            "Receiving successfully submitted";
+    return;
+}
 
 
-    document
-        .getElementById(
-            "newScanButton"
-        )
-        .style.display =
-            "block";
+// =========================================
+// SUCCESS
+// =========================================
+
+receivingStatusModal.style.display = "flex";
+
+document.querySelector(".receiving-modal-title").innerText =
+    "Receiving Completed";
+
+document.querySelector(".receiving-modal-processing").innerText =
+    "Receiving completed successfully";
+
+receivingModalDetails.innerHTML = `
+    <div style="
+        font-size:14px;
+        line-height:1.6;
+        overflow-wrap:anywhere;
+    ">
+        <strong>Inbound:</strong> ${scannedBarcode}<br>
+        <strong>Gross:</strong> ${weight.toFixed(2)} Lbs<br>
+        <strong>Tare:</strong> ${weightTare.toFixed(2)} Lbs<br>
+        <strong>Net:</strong> ${netWeight.toFixed(2)} Lbs<br>
+        <strong>Item:</strong> ${commodityName}<br>
+        <strong>Packaging:</strong> ${packagingName}<br>
+        <strong>Workflow:</strong> ${workflowName}<br><br>
+
+        <strong>System Response:</strong><br>
+        ${data.message ||
+          "Receiving completed successfully."}
+    </div>
+`;
+
+document.getElementById("instructionText").innerText =
+    "Receiving successfully submitted";
+
+document.getElementById("weightSection").style.display =
+    "none";
+
+document.getElementById("newScanButton").style.display =
+    "block";
+
+button.disabled = true;
+button.innerText = "Completed";
 
 
 } catch (error) {
