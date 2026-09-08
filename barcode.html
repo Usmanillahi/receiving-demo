@@ -29,11 +29,6 @@
             text-align: center;
         }
 
-        #reader {
-            width: 100%;
-            margin-top: 20px;
-        }
-
         .result {
             margin-top: 20px;
             padding: 15px;
@@ -188,10 +183,10 @@
 
 </div>
 
-    <div class="result" id="resultBox">
-        Scanned:
-        <strong id="barcodeResult">Nothing yet</strong>
-    </div>
+<div class="result" id="resultBox">
+    Scanned:
+    <strong>Nothing yet</strong>
+</div>
 
 
     <!-- =========================================
@@ -429,8 +424,6 @@ function onScanSuccess(decodedText) {
         video.srcObject = null;
     }
 
-    document.getElementById("barcodeResult").innerText = decodedText;
-
     document.getElementById("instructionText").innerText =
         "Enter receiving information";
 
@@ -571,94 +564,353 @@ document
     );
 
 
-    document.getElementById("submitWeightButton").addEventListener("click", function () {
-        const weightInput = document.getElementById("weightInput");
-        const weight = parseFloat(weightInput.value);
+    document
+    .getElementById("submitWeightButton")
+    .addEventListener("click", async function () {
 
-        const commoditySelect = document.getElementById("commoditySelect");
-        const packagingSelect = document.getElementById("packagingSelect");
-        const workflowSelect = document.getElementById("workflowSelect");
+        const weightInput =
+            document.getElementById("weightInput");
+
+        const weight =
+            parseFloat(weightInput.value);
+
+        const commoditySelect =
+            document.getElementById("commoditySelect");
+
+        const packagingSelect =
+            document.getElementById("packagingSelect");
+
+        const workflowSelect =
+            document.getElementById("workflowSelect");
+
+
+        // =========================================
+        // VALIDATION
+        // =========================================
 
         if (!scannedBarcode) {
-            alert("Please scan an inbound barcode first.");
+
+            alert(
+                "Please scan an inbound barcode first."
+            );
+
             return;
         }
+
 
         if (!weight || weight <= 0) {
-            alert("Please enter a valid gross weight.");
+
+            alert(
+                "Please enter a valid gross weight."
+            );
+
             weightInput.focus();
+
             return;
         }
 
-        const commodityId = Number(commoditySelect.value);
-        const packagingTypeId = Number(packagingSelect.value);
-        const workflowStepId = Number(workflowSelect.value);
 
-        const selectedPackaging = packagingSelect.options[packagingSelect.selectedIndex];
-        const weightTare = parseFloat(selectedPackaging.dataset.tare || 0);
+        const commodityId =
+            Number(commoditySelect.value);
+
+        const packagingTypeId =
+            Number(packagingSelect.value);
+
+        const workflowStepId =
+            Number(workflowSelect.value);
+
+
+        const selectedPackaging =
+            packagingSelect.options[
+                packagingSelect.selectedIndex
+            ];
+
+        const weightTare =
+            parseFloat(
+                selectedPackaging.dataset.tare || 0
+            );
+
 
         if (weight < weightTare) {
-            alert("Gross weight cannot be less than " + weightTare + " Lbs tare.");
+
+            alert(
+                "Gross weight cannot be less than " +
+                weightTare +
+                " Lbs tare."
+            );
+
             weightInput.focus();
+
             return;
         }
 
-        const button = document.getElementById("submitWeightButton");
-        button.disabled = true;
-        button.innerText = "Submitting...";
 
-        const resultBox = document.getElementById("resultBox");
-        resultBox.className = "result";
+        // =========================================
+        // DISPLAY INFORMATION
+        // =========================================
+
+        const netWeight =
+            weight - weightTare;
+
+        const commodityName =
+            getCommodityNameById(commodityId);
+
+        const packagingName =
+            getPackagingNameById(packagingTypeId);
+
+        const workflowName =
+            getWorkflowNameById(workflowStepId);
+
+
+        const button =
+            document.getElementById(
+                "submitWeightButton"
+            );
+
+        const resultBox =
+            document.getElementById(
+                "resultBox"
+            );
+
+
+        // =========================================
+        // DISABLE SUBMIT
+        // =========================================
+
+        button.disabled = true;
+
+        button.innerText =
+            "Processing...";
+
+
+        // =========================================
+        // SHOW "SENT" STATE
+        // =========================================
+
+        resultBox.className =
+            "result success";
+
         resultBox.innerHTML = `
-            Sending receiving information...<br>
-            <strong>${scannedBarcode}</strong>
+            <strong>Receiving Sent</strong>
+
+            <br><br>
+
+            Inbound:
+            ${scannedBarcode}
+
+            <br>
+
+            Gross:
+            ${weight.toFixed(2)} Lbs
+
+            <br>
+
+            Tare:
+            ${weightTare.toFixed(2)} Lbs
+
+            <br>
+
+            Net:
+            ${netWeight.toFixed(2)} Lbs
+
+            <br>
+
+            Item:
+            ${commodityName}
+
+            <br>
+
+            Packaging:
+            ${packagingName}
+
+            <br>
+
+            Workflow:
+            ${workflowName}
+
+            <br><br>
+
+            <span style="font-size:16px;">
+                Processing...
+            </span>
         `;
 
+
+        document
+            .getElementById("instructionText")
+            .innerText =
+                "Processing receiving";
+
+
+        // =========================================
+        // DATA SENT TO N8N
+        // =========================================
+
         const receivingData = {
-            barcode: scannedBarcode,
-            weightReceived: weight,
-            commodityId: commodityId,
-            packagingTypeId: packagingTypeId,
-            weightTare: weightTare,
-            workflowStepId: workflowStepId
+
+            barcode:
+                scannedBarcode,
+
+            weightReceived:
+                weight,
+
+            commodityId:
+                commodityId,
+
+            packagingTypeId:
+                packagingTypeId,
+
+            weightTare:
+                weightTare,
+
+            workflowStepId:
+                workflowStepId
         };
 
-        console.log("Sending to n8n:", receivingData);
 
-        fetch(WEBHOOK_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(receivingData)
-        })
-        .then(async response => {
-            const text = await response.text();
+        console.log(
+            "Sending to n8n:",
+            receivingData
+        );
+
+
+        // =========================================
+        // SEND TO N8N
+        // =========================================
+
+        try {
+
+            const response =
+                await fetch(
+                    WEBHOOK_URL,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                receivingData
+                            )
+                    }
+                );
+
+
+            const text =
+                await response.text();
+
+
+            console.log(
+                "Raw n8n response:",
+                text
+            );
+
+
+            let data = {};
+
+            if (text) {
+
+                try {
+
+                    data =
+                        JSON.parse(text);
+
+                } catch (parseError) {
+
+                    console.error(
+                        "Could not parse n8n response:",
+                        parseError
+                    );
+
+                    throw new Error(
+                        "Invalid response received from n8n."
+                    );
+                }
+            }
+
+
+            // =========================================
+            // HTTP ERROR
+            // =========================================
 
             if (!response.ok) {
-                throw new Error("n8n returned HTTP " + response.status + ": " + text);
+
+                throw new Error(
+                    data.message ||
+                    "n8n returned HTTP " +
+                    response.status
+                );
             }
 
-            if (!text) {
-                return {};
+
+            console.log(
+                "Receiving response:",
+                data
+            );
+
+
+            // =========================================
+            // N8N / RAZOR ERROR
+            // =========================================
+
+            if (data.success === false) {
+
+                resultBox.className =
+                    "result error";
+
+                resultBox.innerHTML = `
+
+                    <strong>
+                        Receiving Failed
+                    </strong>
+
+                    <br><br>
+
+                    Inbound:
+                    ${scannedBarcode}
+
+                    <br><br>
+
+                    ${data.message ||
+                      "The receiving could not be completed."}
+                `;
+
+
+                document
+                    .getElementById(
+                        "instructionText"
+                    )
+                    .innerText =
+                        "Receiving failed";
+
+
+                button.disabled =
+                    false;
+
+                button.innerText =
+                    "Submit Receiving";
+
+
+                return;
             }
 
-            try {
-                return JSON.parse(text);
-            } catch {
-                return {};
-            }
-        })
-        .then(data => {
-            console.log("Receiving completed:", data);
 
-            const netWeight = weight - weightTare;
-            const commodityName = getCommodityNameById(commodityId);
-            const packagingName = getPackagingNameById(packagingTypeId);
-            const workflowName = getWorkflowNameById(workflowStepId);
+            // =========================================
+            // SUCCESS
+            // =========================================
 
-            resultBox.className = "result success";
+            resultBox.className =
+                "result success";
 
             resultBox.innerHTML = `
-                <strong>Receiving Complete</strong>
+
+                <strong>
+                    Receiving Completed
+                </strong>
+
                 <br><br>
 
                 Inbound:
@@ -693,30 +945,88 @@ document
 
                 Workflow:
                 ${workflowName}
-            `;
 
-            document.getElementById("weightSection").style.display = "none";
-            document.getElementById("instructionText").innerText = "Receiving successfully submitted";
-            document.getElementById("newScanButton").style.display = "block";
-        })
-        .catch(error => {
-            console.error("Error submitting receiving:", error);
-
-            resultBox.className = "result error";
-            resultBox.innerHTML = `
-                <strong>Submission Failed</strong>
                 <br><br>
 
+                <span style="font-size:16px;">
+                    ${data.message ||
+                      "Receiving completed successfully."}
+                </span>
+            `;
+
+
+            document
+                .getElementById(
+                    "weightSection"
+                )
+                .style.display =
+                    "none";
+
+
+            document
+                .getElementById(
+                    "instructionText"
+                )
+                .innerText =
+                    "Receiving successfully submitted";
+
+
+            document
+                .getElementById(
+                    "newScanButton"
+                )
+                .style.display =
+                    "block";
+
+
+        } catch (error) {
+
+            // =========================================
+            // NETWORK / UNEXPECTED ERROR
+            // =========================================
+
+            console.error(
+                "Error submitting receiving:",
+                error
+            );
+
+
+            resultBox.className =
+                "result error";
+
+
+            resultBox.innerHTML = `
+
+                <strong>
+                    Submission Failed
+                </strong>
+
+                <br><br>
+
+                Inbound:
                 ${scannedBarcode}
 
                 <br><br>
 
-                Please try again.
+                ${error.message ||
+                  "Unable to communicate with the receiving system."}
             `;
 
-            button.disabled = false;
-            button.innerText = "Submit Receiving";
-        });
+
+            document
+                .getElementById(
+                    "instructionText"
+                )
+                .innerText =
+                    "Submission failed";
+
+
+            button.disabled =
+                false;
+
+            button.innerText =
+                "Submit Receiving";
+        }
     });
 
     document.getElementById("newScanButton").addEventListener("click", function () {
