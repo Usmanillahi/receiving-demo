@@ -152,14 +152,20 @@
             background: #b00020;
         }
 
+            /* =========================================
+        RECEIVING STATUS MODAL
+        ========================================= */
+
         #receivingStatusModal {
             display: none;
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.55);
             z-index: 9999;
+
             align-items: center;
             justify-content: center;
+
             padding: 20px;
         }
 
@@ -167,6 +173,7 @@
             width: 100%;
             max-width: 380px;
             max-height: 85vh;
+
             overflow-y: auto;
 
             border-radius: 18px;
@@ -175,10 +182,22 @@
             text-align: center;
             box-sizing: border-box;
 
+            /* IMPORTANT:
+            Give the modal a visible background
+            even before success/failure */
+            background: #ffffff;
+            color: #222222;
+
             box-shadow:
                 0 10px 35px rgba(0, 0, 0, 0.3);
 
             transition: background 0.2s ease;
+        }
+
+        /* PROCESSING / SENT */
+        .receiving-modal-box.pending {
+            background: #ffffff;
+            color: #222222;
         }
 
         /* GREEN SUCCESS */
@@ -202,6 +221,7 @@
         .receiving-modal-details {
             font-size: 14px;
             line-height: 1.6;
+
             overflow-wrap: anywhere;
             word-break: break-word;
         }
@@ -213,10 +233,11 @@
             opacity: 0.8;
         }
 
+        /* BIG OK BUTTON */
         .receiving-modal-ok {
             width: 100%;
-            margin-top: 22px;
 
+            margin-top: 22px;
             padding: 18px 20px;
 
             border: none;
@@ -228,12 +249,21 @@
             cursor: pointer;
         }
 
+        /* Hide OK while processing */
+        .receiving-modal-box.pending .receiving-modal-ok {
+            display: none;
+        }
+
+        /* Success OK */
         .receiving-modal-box.success .receiving-modal-ok {
+            display: block;
             background: #218838;
             color: white;
         }
 
+        /* Failure OK */
         .receiving-modal-box.failure .receiving-modal-ok {
+            display: block;
             background: #c82333;
             color: white;
         }
@@ -835,6 +865,19 @@ document
     const receivingModalOk =
         document.getElementById("receivingModalOk");
 
+// =========================================
+// SHOW "RECEIVING SENT" MODAL
+// =========================================
+
+receivingModalBox.className =
+    "receiving-modal-box pending";
+
+receivingModalTitle.innerText =
+    "Receiving Sent";
+
+receivingModalProcessing.innerText =
+    "Processing...";
+
 receivingModalDetails.innerHTML = `
     Inbound: ${scannedBarcode}<br>
     Gross: ${weight.toFixed(2)} Lbs<br>
@@ -845,12 +888,18 @@ receivingModalDetails.innerHTML = `
     Workflow: ${workflowName}
 `;
 
+/* Show modal */
 receivingStatusModal.style.display = "flex";
+
+/*
+ * Record the exact moment the
+ * "Receiving Sent" modal appeared.
+ */
+const modalShownAt = Date.now();
 
 document
     .getElementById("instructionText")
-    .innerText =
-        "Processing receiving";
+    .innerText = "Processing receiving";
 
 
         // =========================================
@@ -891,7 +940,6 @@ document
 
 try {
 
-    const sentAt = Date.now();
 
     const response =
         await fetch(
@@ -920,26 +968,26 @@ try {
         "Raw n8n response:",
         text
     );
+// =========================================
+// KEEP "RECEIVING SENT" MODAL FOR 4 SECONDS
+// =========================================
 
+const modalElapsed =
+    Date.now() - modalShownAt;
 
-    // Make sure "Receiving Sent" stays
-    // on screen for at least 2 seconds.
-    const elapsed =
-        Date.now() - sentAt;
-
-    const remaining =
-        Math.max(
-            0,
-            2000 - elapsed
-        );
-
-    await new Promise(
-        resolve =>
-            setTimeout(
-                resolve,
-                remaining
-            )
+const modalRemaining =
+    Math.max(
+        0,
+        4000 - modalElapsed
     );
+
+await new Promise(resolve =>
+    setTimeout(
+        resolve,
+        modalRemaining
+    )
+);
+
 
 
     let data = {};
@@ -1023,15 +1071,14 @@ if (data.success === false) {
 // =========================================
 // SUCCESS
 // =========================================
-
 receivingModalBox.className =
-    "receiving-modal-box";
+    "receiving-modal-box success";
 
 receivingModalTitle.innerText =
-    "Receiving Sent";
+    "Receiving Completed";
 
 receivingModalProcessing.innerText =
-    "Processing...";
+    "Successfully processed";
 
 receivingModalDetails.innerHTML = `
     <strong>Inbound:</strong> ${scannedBarcode}<br>
@@ -1040,20 +1087,15 @@ receivingModalDetails.innerHTML = `
     <strong>Net:</strong> ${netWeight.toFixed(2)} Lbs<br>
     <strong>Item:</strong> ${commodityName}<br>
     <strong>Packaging:</strong> ${packagingName}<br>
-    <strong>Workflow:</strong> ${workflowName}
+    <strong>Workflow:</strong> ${workflowName}<br><br>
+
+    <strong>System Response:</strong><br>
+    ${data.message ||
+      "Receiving completed successfully."}
 `;
 
 receivingStatusModal.style.display =
     "flex";
-
-document.getElementById("instructionText").innerText =
-    "Receiving successfully submitted";
-
-document.getElementById("weightSection").style.display =
-    "none";
-
-document.getElementById("newScanButton").style.display =
-    "block";
 
 button.disabled = true;
 button.innerText = "Completed";
